@@ -1,0 +1,201 @@
+<div style="display: flex; justify-content: center; align-items: center; flex-direction: column; height: 100vh;">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+    <input type="file" id="exampleInputFile" style="margin-bottom: 20px;background-color: #f0f0f0;font-size: large;">
+    <div style="display: flex; justify-content: center;">
+        <div id="fileContainer"></div>
+        <div id="selectedContainer"></div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <button id="confirmButton" class="niceButton3">确定</button>
+        <button id="exportButton"  class="niceButton3">导出</button>
+    </div>
+
+</div>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+<input type="file" id="exampleInputFile">
+<div style="display: flex;">
+    <div id="fileContainer"></div>
+    <div id="selectedContainer"></div>
+</div>
+
+<button id="confirmButton">确定</button>
+<button id="exportButton">导出</button> -->
+
+<script>
+let remainingItems = []; // Array to store remaining items for selection
+const groupNumber = 0;
+
+document.getElementById('exampleInputFile').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(event) {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0]; // Assuming only one sheet
+        const sheet = workbook.Sheets[sheetName];
+        const excelData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        displayData(excelData);
+    };
+
+    reader.onerror = function(event) {
+        console.error('File reading error');
+    };
+
+    reader.readAsArrayBuffer(file);
+});
+
+function displayData(data) {
+    console.log('Displaying data');
+    const container = document.getElementById('fileContainer');
+    container.innerHTML = ''; // Clear container
+    remainingItems = []; // Clear remaining items array
+    groupCounter = 1;
+
+    data.slice(1).forEach(row => { // Start reading data from the second row (first row is header)
+        const div = document.createElement('div');
+        div.className = 'col-md-8';
+
+        const innerDiv = document.createElement('div');
+        innerDiv.className = 'input-group';
+        innerDiv.style.display = 'flex';
+        innerDiv.style.justifyContent = 'space-between';
+
+        const input1 = document.createElement('input');
+        input1.type = 'text';
+        input1.className = 'form-control1';
+        input1.value = row[0]+'--'+row[1]; 
+
+        const checkboxDiv = document.createElement('div');
+        checkboxDiv.className = 'input-group-addon';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+
+        innerDiv.appendChild(input1);
+        innerDiv.appendChild(checkboxDiv);
+        checkboxDiv.appendChild(checkbox);
+        div.appendChild(innerDiv);
+
+        container.appendChild(div); // Append each item to data container
+        remainingItems.push(div); // Add to remaining items array
+    });
+}
+
+document.getElementById('confirmButton').addEventListener('click', function() {
+    const selectedContainer = document.getElementById('selectedContainer');
+    const checkedItems = document.querySelectorAll('.col-md-8 input[type="checkbox"]:checked');
+    const checkedCount = checkedItems.length;
+
+    if (checkedCount < 4 || checkedCount > 6) {
+        alert('The number of selections must be between 4 and 6');
+        return;
+    }
+
+    const endGroupMessage = document.createElement('p');
+    endGroupMessage.textContent = '第' + groupCounter + '组'; // Display group number
+    selectedContainer.appendChild(endGroupMessage);
+    groupCounter++; // Increment group counter
+
+    // Move selected items to selected container and remove checkboxes
+    checkedItems.forEach(item => {
+        const parentDiv = item.closest('.col-md-8');
+        const clone = parentDiv.cloneNode(true);
+        clone.querySelector('.input-group-addon').remove(); // Remove checkbox div
+        selectedContainer.appendChild(clone);
+        parentDiv.remove(); // Remove from file container
+        const index = remainingItems.indexOf(parentDiv);
+        if (index !== -1) {
+            remainingItems.splice(index, 1); // Remove from remaining items array
+        }
+    });
+    // Check if there are any remaining items
+    if (remainingItems.length === 0) {
+        document.getElementById('confirmButton').disabled = true; // Disable the confirm button if no items left
+        alert('No more items left to select.');
+    } 
+});
+
+document.getElementById('exportButton').addEventListener('click', function() {
+    const selectedContainer = document.getElementById('selectedContainer');
+    const rows = [];
+    rows.push(['学号', '姓名']);
+    selectedContainer.querySelectorAll('p').forEach(groupHeader => {
+        const group = [groupHeader.textContent]; 
+        rows.push(group); 
+        let nextElement = groupHeader.nextElementSibling; 
+        while(nextElement && !nextElement.matches('p')) { 
+            if(nextElement.querySelector('input[type="text"]')) {
+                const inputs = nextElement.querySelectorAll('input[type="text"]');
+                inputs.forEach(input => {
+                    const values = input.value.split('--'); 
+                    rows.push(values);
+                });
+            }
+            nextElement = nextElement.nextElementSibling; 
+        }
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    XLSX.writeFile(wb, 'export.xlsx');
+});
+</script>
+
+<style>
+    body {
+        /* background-color: #f0f0f0; */
+        font-family: Arial, sans-serif;
+        background-image: url('https://th.bing.com/th/id/R.b7a385d75dd6769b0b7aece7b10d4e6b?rik=UDrcmMW5K09uBA&pid=ImgRaw&r=0');
+        background-size: cover;
+        background-position: center; 
+    }
+    #fileContainer {
+        background-color: #f0f0f0;
+        width: 300px;
+        height: 400px;
+        overflow: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+    }
+    #selectedContainer {
+        background-color: #f0f0f0;
+        width: 300px;
+        height: 400px;
+        overflow: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-left: 30px;
+    }
+    #fileContainer, #selectedContainer {
+    width: 300px;
+    height: 400px;
+    overflow: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin: 0 15px; 
+    }
+    .niceButton3 {
+        background-color: #a8dded;
+        border-radius: 12px;
+        border: none;
+        color: white;
+        padding: 16px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 3px 30px;
+        -webkit-transition-duration: 0.4s;
+        transition-duration: 0.4s;
+        cursor: pointer;
+      }
+      .niceButton3:hover {
+        background-color: #fff;
+        color: #85d0e7;
+        border: 1px solid #ccc;
+      }
+</style>
